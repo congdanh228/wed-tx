@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mini App Tài Xỉu VIP</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #0f172a; color: #f8fafc; font-family: system-ui, sans-serif; touch-action: manipulation; }
+        .card { background-color: #1e293b; border: 1px solid #334155; }
+        .modal { display: none; background: rgba(0,0,0,0.85); }
+        .modal.active { display: flex; }
+        .tai-btn { background: linear-gradient(135deg, #e11d48, #be123c); }
+        .xiu-btn { background: linear-gradient(135deg, #2563eb, #1d4ed8); }
+        .dice-box {
+            width: 50px; height: 50px; background: #ffffff; border-radius: 12px;
+            display: grid; grid-template: repeat(3, 1fr) / repeat(3, 1fr); padding: 8px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 0 15px rgba(245, 158, 11, 0.4);
+            border: 2px solid #fbbf24;
+        }
+        .dot { background-color: #0f172a; border-radius: 50%; width: 7px; height: 7px; align-self: center; justify-self: center; }
+        .dice-hidden { background: #334155 !important; border: 2px dashed #64748b !important; display: flex !important; align-items: center; justify-content: center; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between p-4">
+
+    <!-- HEADER USER -->
+    <header class="card rounded-2xl px-4 py-3 flex items-center justify-between shadow-lg">
+        <div class="flex items-center gap-3">
+            <img id="userAvatar" src="https://ui-avatars.com/api/?name=User" class="w-10 h-10 rounded-full border-2 border-amber-400 object-cover">
+            <div>
+                <h1 id="userName" class="font-bold text-sm text-amber-400">Thành Viên</h1>
+                <p class="text-[10px] text-slate-400">TK: <span id="userAccDisplay" class="text-slate-300 font-mono">user</span></p>
+            </div>
+        </div>
+        <div class="text-right">
+            <span class="text-[10px] text-slate-400 block uppercase font-bold">Số Dư</span>
+            <span id="balanceDisplay" class="text-base font-extrabold text-emerald-400 font-mono">100,000 VNĐ</span>
+        </div>
+    </header>
+
+    <!-- MÀN HÌNH GAME CHÍNH -->
+    <main class="space-y-4 my-auto pt-2">
+        <div class="card rounded-2xl p-5 text-center space-y-4 shadow-2xl relative">
+            <div class="flex justify-between items-center text-xs text-slate-400">
+                <span>Phiên: <b id="sessionId" class="text-white">#1001</b></span>
+                <span class="text-amber-400 font-bold text-sm" id="timerDisplay">Thời gian: 30s</span>
+            </div>
+
+            <!-- XÚC XẮC -->
+            <div id="diceArea" class="py-4 flex items-center justify-center gap-4">
+                <div class="dice-box dice-hidden"><i class="fa-solid fa-question text-slate-400"></i></div>
+                <div class="dice-box dice-hidden"><i class="fa-solid fa-question text-slate-400"></i></div>
+                <div class="dice-box dice-hidden"><i class="fa-solid fa-question text-slate-400"></i></div>
+            </div>
+
+            <!-- ĐẶT CƯỢC -->
+            <div class="space-y-3">
+                <input type="number" id="betAmount" placeholder="Nhập số tiền cược" value="20000" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-center text-white font-mono focus:outline-none focus:border-amber-400">
+                <div class="grid grid-cols-2 gap-3">
+                    <button type="button" onclick="placeBet('TÀI')" class="tai-btn py-3 rounded-xl font-black text-white shadow-lg active:scale-95 transition">ĐẶT TÀI (11-17)</button>
+                    <button type="button" onclick="placeBet('XỈU')" class="xiu-btn py-3 rounded-xl font-black text-white shadow-lg active:scale-95 transition">ĐẶT XỈU (3-10)</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- MENU PHỤ -->
+        <div class="grid grid-cols-3 gap-2">
+            <button type="button" onclick="openModal('withdrawModal')" class="card hover:bg-slate-700 py-2.5 rounded-xl text-[11px] font-bold text-emerald-400 flex flex-col items-center gap-1">
+                <i class="fa-solid fa-money-bill-transfer"></i> Rút Tiền
+            </button>
+            <button type="button" onclick="openModal('topModal')" class="card hover:bg-slate-700 py-2.5 rounded-xl text-[11px] font-bold text-amber-400 flex flex-col items-center gap-1">
+                <i class="fa-solid fa-trophy"></i> Top 10
+            </button>
+            <button type="button" onclick="openModal('cauModal')" class="card hover:bg-slate-700 py-2.5 rounded-xl text-[11px] font-bold text-slate-300 flex flex-col items-center gap-1">
+                <i class="fa-solid fa-clock-rotate-left text-amber-400"></i> Lịch Sử
+            </button>
+        </div>
+
+        <!-- LOG -->
+        <div class="card rounded-2xl p-3 shadow-lg space-y-2">
+            <span class="text-xs font-bold text-slate-400 px-1">Nhật Ký Game</span>
+            <div id="logs" class="bg-slate-900/80 rounded-xl p-3 h-24 overflow-y-auto text-[11px] font-mono space-y-1.5 border border-slate-800">
+                <p class="text-emerald-400">[Hệ Thống] Kết nối phòng chơi thành công.</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- MODALS -->
+    <div id="withdrawModal" class="modal fixed inset-0 z-50 items-center justify-center p-4">
+        <div class="card w-full max-w-sm rounded-2xl p-4 space-y-3">
+            <div class="flex justify-between items-center border-b border-slate-700 pb-2">
+                <h3 class="font-bold text-emerald-400 text-sm">RÚT TIỀN THƯỞNG</h3>
+                <button type="button" onclick="closeModal('withdrawModal')" class="text-slate-400"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="space-y-3 text-xs">
+                <input type="number" id="withdrawAmount" placeholder="Số tiền rút..." class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono">
+                <input type="text" id="withdrawBank" placeholder="Ngân hàng / STK / Tên" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white">
+                <button type="button" onclick="submitWithdraw()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl">GỬI YÊU CẦU</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="topModal" class="modal fixed inset-0 z-50 items-center justify-center p-4">
+        <div class="card w-full max-w-sm rounded-2xl p-4 space-y-3">
+            <div class="flex justify-between items-center border-b border-slate-700 pb-2">
+                <h3 class="font-bold text-amber-400 text-sm">TOP 10 CAO THỦ</h3>
+                <button type="button" onclick="closeModal('topModal')" class="text-slate-400"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div id="topList" class="max-h-60 overflow-y-auto space-y-2 text-xs"></div>
+        </div>
+    </div>
+
+    <div id="cauModal" class="modal fixed inset-0 z-50 items-center justify-center p-4">
+        <div class="card w-full max-w-sm rounded-2xl p-4 space-y-3">
+            <div class="flex justify-between items-center border-b border-slate-700 pb-2">
+                <h3 class="font-bold text-amber-400 text-sm">LỊCH SỬ KẾT QUẢ</h3>
+                <button type="button" onclick="closeModal('cauModal')" class="text-slate-400"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div id="cauList" class="max-h-60 overflow-y-auto space-y-1.5 text-xs font-mono"></div>
+        </div>
+    </div>
+
+    <script>
+        let balance = parseInt(localStorage.getItem('user_balance')) || 100000;
+        let userName = localStorage.getItem('user_name') || "ThànhVien_" + Math.floor(100 + Math.random()*900);
+        let userAcc = localStorage.getItem('user_acc') || "player" + Math.floor(1000 + Math.random()*9000);
+        
+        localStorage.setItem('user_balance', balance);
+        localStorage.setItem('user_name', userName);
+        localStorage.setItem('user_acc', userAcc);
+
+        document.getElementById('userName').innerText = userName;
+        document.getElementById('userAccDisplay').innerText = userAcc;
+        document.getElementById('userAvatar').src = `https://ui-avatars.com/api/?name=${encodeURIComponent(userName)}&background=random`;
+        document.getElementById('balanceDisplay').innerText = balance.toLocaleString() + " VNĐ";
+
+        let timeLeft = 30;
+        let currentBet = null;
+        let cauHistory = JSON.parse(localStorage.getItem('tx_cau')) || [];
+
+        setInterval(() => {
+            timeLeft--;
+            document.getElementById('timerDisplay').innerText = `Thời gian: ${timeLeft}s`;
+
+            if (timeLeft <= 0) {
+                timeLeft = 30;
+                rollDiceAndResult();
+            }
+        }, 1000);
+
+        function rollDiceAndResult() {
+            let d1 = Math.floor(Math.random() * 6) + 1;
+            let d2 = Math.floor(Math.random() * 6) + 1;
+            let d3 = Math.floor(Math.random() * 6) + 1;
+            let total = d1 + d2 + d3;
+            let result = total >= 11 ? "TÀI" : "XỈU";
+            let session = "#" + Math.floor(100000 + Math.random() * 900000);
+
+            document.getElementById('diceArea').innerHTML = getDiceHTML(d1) + getDiceHTML(d2) + getDiceHTML(d3);
+            document.getElementById('sessionId').innerText = session;
+            addLog(`Kết quả: ${d1}-${d2}-${d3} = ${total} (${result})`, "text-blue-400");
+
+            cauHistory.unshift({ session, result, detail: `${d1}+${d2}+${d3}=${total}` });
+            if (cauHistory.length > 30) cauHistory.pop();
+            localStorage.setItem('tx_cau', JSON.stringify(cauHistory));
+
+            // Lưu dữ liệu để trang Admin đọc được
+            let myStats = JSON.parse(localStorage.getItem('tx_my_stats')) || { name: userName, acc: userAcc, win: 0 };
+            
+            if (currentBet) {
+                if (currentBet.choice === result) {
+                    balance += currentBet.amount;
+                    myStats.win += currentBet.amount;
+                    addLog(`🎉 Thắng +${currentBet.amount.toLocaleString()}đ`, "text-emerald-400 font-bold");
+                } else {
+                    balance -= currentBet.amount;
+                    addLog(`❌ Thua -${currentBet.amount.toLocaleString()}đ`, "text-rose-400");
+                }
+                localStorage.setItem('user_balance', balance);
+                document.getElementById('balanceDisplay').innerText = balance.toLocaleString() + " VNĐ";
+                currentBet = null;
+            }
+            myStats.balance = balance;
+            localStorage.setItem('tx_my_stats', JSON.stringify(myStats));
+        }
+
+        function placeBet(choice) {
+            if (timeLeft <= 5) return alert("Sắp hết giờ, không thể đặt cược phiên này!");
+            let amt = parseInt(document.getElementById('betAmount').value);
+            if (isNaN(amt) || amt <= 0) return alert("Số tiền cược không hợp lệ!");
+            if (amt > balance) return alert("Số dư không đủ!");
+
+            currentBet = { choice, amount: amt };
+            addLog(`Đã cược ${choice} số tiền ${amt.toLocaleString()}đ`, "text-amber-400");
+        }
+
+        function submitWithdraw() {
+            let amt = parseInt(document.getElementById('withdrawAmount').value);
+            let bank = document.getElementById('withdrawBank').value.trim();
+            if (isNaN(amt) || amt <= 0 || !bank) return alert("Vui lòng nhập đủ thông tin rút tiền!");
+            if (amt > balance) return alert("Số dư không đủ để rút!");
+
+            balance -= amt;
+            localStorage.setItem('user_balance', balance);
+            document.getElementById('balanceDisplay').innerText = balance.toLocaleString() + " VNĐ";
+
+            let reqs = JSON.parse(localStorage.getItem('tx_withdraws')) || [];
+            reqs.unshift({ user: userName, acc: userAcc, amount: amt, bank, status: 'Chờ duyệt' });
+            localStorage.setItem('tx_withdraws', JSON.stringify(reqs));
+
+            closeModal('withdrawModal');
+            alert("Gửi lệnh rút tiền thành công!");
+        }
+
+        function getDiceHTML(num) {
+            let dots = {1:[[2,2]], 2:[[1,1],[3,3]], 3:[[1,1],[2,2],[3,3]], 4:[[1,1],[1,3],[3,1],[3,3]], 5:[[1,1],[1,3],[2,2],[3,1],[3,3]], 6:[[1,1],[1,3],[2,1],[2,3],[3,1],[3,3]]};
+            let html = '';
+            (dots[num] || [[2,2]]).forEach(p => html += `<div class="dot" style="grid-area: ${p[0]} / ${p[1]};"></div>`);
+            return `<div class="dice-box">${html}</div>`;
+        }
+
+        function addLog(msg, color) {
+            let logs = document.getElementById('logs');
+            let p = document.createElement('p');
+            p.className = color;
+            p.innerText = `[${new Date().toLocaleTimeString()}] ${msg}`;
+            logs.appendChild(p);
+            logs.scrollTop = logs.scrollHeight;
+        }
+
+        function openModal(id) {
+            if (id === 'cauModal') {
+                document.getElementById('cauList').innerHTML = cauHistory.map(i => `<div class="flex justify-between bg-slate-800 p-2 rounded"><span>${i.session} (${i.detail})</span><b class="${i.result==='TÀI'?'text-rose-500':'text-blue-500'}">${i.result}</b></div>`).join('');
+            }
+            if (id === 'topModal') {
+                let stats = JSON.parse(localStorage.getItem('tx_my_stats')) || { name: userName, win: 0 };
+                document.getElementById('topList').innerHTML = `<div class="flex justify-between bg-slate-800 p-2 rounded"><span class="text-amber-400">#1 ${stats.name}</span><span class="text-amber-400">+${(stats.win||0).toLocaleString()}đ</span></div>`;
+            }
+            document.getElementById(id).classList.add('active');
+        }
+        function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+    </script>
+</body>
+</html>
